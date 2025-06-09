@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Typing Speed Game</title>
   <link rel="stylesheet" href="style.css">
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
 </head>
 <body>
   <div class="container">
@@ -58,7 +60,7 @@
 
       <div class="stat-card">
         <div class="stat-title">🏆 HIGH SCORES</div>
-        <div class="stat-value" id="highScores"></div>
+        <div class="stat-value" id="highScores">Loading...</div>
       </div>
     </div>
   </div>

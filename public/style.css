@@ -195,6 +195,23 @@ progress::-webkit-progress-value {
   color: #6c757d;
 }
 
+.leaderboard-btn {
+  margin-top: 10px;
+  padding: 8px 15px;
+  background-color: var(--accent-color);
+  color: #202124;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  width: 100%;
+}
+
+.score {
+  color: var(--primary-color);
+  font-weight: bold;
+}
+
 @media (max-width: 768px) {
   .container {
     grid-template-columns: 1fr;

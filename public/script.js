@@ -1,3 +1,18 @@
+// Firebase configuration - replace with your actual Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyAszAaNguCdvGXLKllKYnEjv0LQA_yVXt0",
+  authDomain: "typingspeedgameweb.firebaseapp.com",
+  databaseURL: "https://typingspeedgameweb-default-rtdb.firebaseio.com/",
+  projectId: "typingspeedgameweb",
+  storageBucket: "typingspeedgameweb.firebasestorage.app",
+  messagingSenderId: "258061743519",
+  appId: "1:258061743519:web:2c250d03d8a103991439aa"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
 // Game state
 let gameRunning = false;
 let gameStartTime;
@@ -6,6 +21,7 @@ let totalChars = 0;
 let wpmHistory = [];
 let darkMode = false;
 let currentPrompt = '';
+let timerInterval;
 
 // Difficulty settings
 const difficulties = {
@@ -38,27 +54,109 @@ const difficultySelect = document.getElementById('difficulty');
 const wpmProgress = document.getElementById('wpmProgress');
 const accuracyProgress = document.getElementById('accuracyProgress');
 
-// High scores
+// Save score to Firebase
+async function saveScore(username, wpm, accuracy, difficulty) {
+  const scoreData = {
+    username,
+    wpm,
+    accuracy,
+    difficulty,
+    timestamp: firebase.database.ServerValue.TIMESTAMP
+  };
+  
+  try {
+    await database.ref('scores').push(scoreData);
+    return true;
+  } catch (error) {
+    console.error("Error saving score:", error);
+    return false;
+  }
+}
+
+// Get high scores from Firebase
+async function getHighScores(difficulty, limit = 5) {
+  try {
+    const snapshot = await database.ref('scores')
+      .orderByChild('difficulty')
+      .equalTo(difficulty)
+      .limitToLast(limit)
+      .once('value');
+    
+    if (!snapshot.exists()) return [];
+    
+    const scores = [];
+    snapshot.forEach(childSnapshot => {
+      scores.push({
+        ...childSnapshot.val(),
+        id: childSnapshot.key
+      });
+    });
+    
+    return scores.sort((a, b) => b.wpm - a.wpm);
+  } catch (error) {
+    console.error("Error getting scores:", error);
+    return [];
+  }
+}
+
+// High scores management
 const highScores = {
-  easy: 0,
-  medium: 0,
-  hard: 0,
-  update(difficulty, score) {
-    if (score > this[difficulty]) {
-      this[difficulty] = score;
-      this.display();
+  async update(difficulty, score) {
+    try {
+      const currentHigh = this[difficulty] || 0;
+      if (score > currentHigh) {
+        this[difficulty] = score;
+        await this.display();
+      }
+    } catch (error) {
+      console.error("Error updating high score:", error);
     }
   },
-  display() {
-    highScoresEl.innerHTML = `
-      <div>Easy: <span class="score">${this.easy} WPM</span></div>
-      <div>Medium: <span class="score">${this.medium} WPM</span></div>
-      <div>Hard: <span class="score">${this.hard} WPM</span></div>
-    `;
+  
+  async display() {
+    try {
+      const easyScores = await getHighScores('easy', 1);
+      const mediumScores = await getHighScores('medium', 1);
+      const hardScores = await getHighScores('hard', 1);
+      
+      this.easy = easyScores.length ? easyScores[0].wpm : 0;
+      this.medium = mediumScores.length ? mediumScores[0].wpm : 0;
+      this.hard = hardScores.length ? hardScores[0].wpm : 0;
+      
+      highScoresEl.innerHTML = `
+        <div>Easy: <span class="score">${this.easy} WPM</span></div>
+        <div>Medium: <span class="score">${this.medium} WPM</span></div>
+        <div>Hard: <span class="score">${this.hard} WPM</span></div>
+        <button id="showLeaderboard" class="leaderboard-btn">View Leaderboard</button>
+      `;
+      
+      document.getElementById('showLeaderboard')?.addEventListener('click', async () => {
+        const difficulty = difficultySelect.value;
+        const leaderboard = await showLeaderboard(difficulty);
+        alert(`Top ${difficulty} Scores:\n\n${leaderboard}`);
+      });
+    } catch (error) {
+      console.error("Error displaying high scores:", error);
+    }
   }
 };
 
-// Initialize
+// Show leaderboard
+async function showLeaderboard(difficulty) {
+  const scores = await getHighScores(difficulty, 10);
+  
+  if (scores.length === 0) {
+    return "No scores yet for this difficulty!";
+  }
+  
+  return scores
+    .map((score, i) => 
+      `${i+1}. ${score.username}: ${score.wpm} WPM (${score.accuracy}%)`
+    )
+    .join('\n');
+}
+
+// Initialize high scores display
 highScores.display();
 
 // Event listeners
@@ -70,9 +168,20 @@ exitBtn.addEventListener('click', () => {
   }
 });
 themeBtn.addEventListener('click', toggleTheme);
-inputEl.addEventListener('input', checkTyping);
 
+inputEl.addEventListener('input', function() {
+  checkTyping();
+  
+  // Check for completion
+  if (this.value === currentPrompt) {
+    endGame();
+  }
+});
+
+// Game functions
 function startGame() {
+  if (gameRunning) return;
+  
   gameRunning = true;
   gameStartTime = new Date();
   correctChars = 0;
@@ -87,7 +196,8 @@ function startGame() {
   updateFeedback("Type the text above! First character...");
   
   // Start timer
-  const timerInterval = setInterval(() => {
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
     if (!gameRunning) {
       clearInterval(timerInterval);
       return;
@@ -181,28 +291,37 @@ function updateFeedback(message) {
   feedbackEl.textContent = message;
 }
 
-function endGame() {
+async function endGame() {
+  if (!gameRunning) return;
+  
   gameRunning = false;
   inputEl.disabled = true;
+  clearInterval(timerInterval);
   
-  const timeElapsed = (new Date() - gameStartTime) / 60000; // in minutes
+  const timeElapsed = (new Date() - gameStartTime) / 60000;
   const difficulty = difficulties[difficultySelect.value];
   const finalWpm = Math.round(((correctChars / 5) * difficulty.multiplier) / timeElapsed);
   const finalAccuracy = totalChars > 0 ? Math.round((correctChars / totalChars) * 100) : 0;
   
   // Save high score
-  highScores.update(difficultySelect.value, finalWpm);
+  await highScores.update(difficultySelect.value, finalWpm);
   
-  // Show results
+  // Show results with username prompt
+  const username = prompt(`Test Complete!\n\nFinal WPM: ${finalWpm}\nAccuracy: ${finalAccuracy}%\n\nEnter your name to save your score:`);
+  
+  if (username && username.trim()) {
+    await saveScore(username.trim(), finalWpm, finalAccuracy, difficultySelect.value);
+    await highScores.display(); // Refresh high scores
+  }
+  
+  // Performance comment
   let performanceComment;
   if (finalWpm >= 80) performanceComment = "Expert Typist! 🚀";
   else if (finalWpm >= 50) performanceComment = "Great Job! 👍";
   else if (finalWpm >= 30) performanceComment = "Good Start! 🙂";
   else performanceComment = "Keep Practicing! 💪";
   
-  setTimeout(() => {
-    alert(`Test Complete!\n\nFinal WPM: ${finalWpm}\nAccuracy: ${finalAccuracy}%\n\n${performanceComment}`);
-  }, 100);
+  alert(performanceComment);
 }
 
 function restartGame() {
@@ -212,6 +331,7 @@ function restartGame() {
     }
   }
   gameRunning = false;
+  clearInterval(timerInterval);
   setTimeout(startGame, 100);
 }
 
