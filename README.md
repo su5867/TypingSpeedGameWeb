@@ -7,8 +7,7 @@ A browser-based Typing Speed Game built with **HTML**, **CSS**, and **JavaScript
 ## 🚀 Live Demo
 
 Try the game live here:  
-[https://your-live-url.netlify.app](https://your-live-url.netlify.app)  
-*(Replace with your actual deployed URL)*
+https://typing-speed-game-lgmycm9cq-su5867s-projects.vercel.app
 
 ---
 
