@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Typing Speed Game</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <div class="game-area">
+      <div class="control-panel">
+        <div>
+          <label for="difficulty">Difficulty:</label>
+          <select id="difficulty">
+            <option value="easy">Easy</option>
+            <option value="medium" selected>Medium</option>
+            <option value="hard">Hard</option>
+          </select>
+        </div>
+        <button id="themeBtn" class="theme-btn">🌙 Dark Mode</button>
+      </div>
+
+      <div class="prompt-box" id="prompt"></div>
+      <div class="input-box-container">
+        <textarea id="input" class="input-box" placeholder="Start typing here..." disabled></textarea>
+      </div>
+
+      <div class="button-panel">
+        <button id="startBtn" class="action-btn primary">START</button>
+        <button id="restartBtn" class="action-btn accent">RESTART</button>
+        <button id="exitBtn" class="action-btn danger">EXIT</button>
+      </div>
+    </div>
+
+    <div class="stats-panel">
+      <div class="stat-card">
+        <div class="stat-title">⏱ TIME REMAINING</div>
+        <div class="stat-value" id="timer">60s</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-title">🚀 TYPING SPEED (WPM)</div>
+        <div class="stat-value" id="wpm">0</div>
+        <progress id="wpmProgress" value="0" max="150"></progress>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-title">🎯 ACCURACY</div>
+        <div class="stat-value" id="accuracy">0%</div>
+        <progress id="accuracyProgress" value="0" max="100"></progress>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-title">💡 LIVE FEEDBACK</div>
+        <div class="stat-value" id="feedback">Press Start to begin</div>
+      </div>
+
+      <div class="stat-card">
+        <div class="stat-title">🏆 HIGH SCORES</div>
+        <div class="stat-value" id="highScores"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
